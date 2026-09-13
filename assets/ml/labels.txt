@@ -1,0 +1,6 @@
+copper_wire
+aluminium
+brass
+iron
+pcb
+battery
