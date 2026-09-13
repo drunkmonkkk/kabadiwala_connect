@@ -299,6 +299,111 @@ class _ScrapResultScreenState extends State<ScrapResultScreen> {
                           ],
                         ),
                       ),
+                      if (components.isNotEmpty || valuation != null) ...[
+                        const SizedBox(height: 20),
+                        _Surface(
+                          color: const Color(0xFFF9F6EE),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _Eyebrow('AI COMPONENT & GRADING BREAKDOWN'),
+                              if (valuation != null) ...[
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _Palette.mint,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.verified_outlined,
+                                        size: 18,
+                                        color: _Palette.green,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          valuation.grade,
+                                          style: AppTypography.label.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            color: _Palette.dark,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (valuation.note.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    valuation.note,
+                                    style: AppTypography.caption.copyWith(
+                                      color: _Palette.muted,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                              if (components.isNotEmpty) ...[
+                                const SizedBox(height: 14),
+                                Text(
+                                  'Identified parts & components:',
+                                  style: AppTypography.caption.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: _Palette.ink,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: components
+                                      .map(
+                                        (c) => Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: _Palette.border,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                Icons.memory_rounded,
+                                                size: 16,
+                                                color: _Palette.green,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                '${c.name} (${c.count}x)',
+                                                style: AppTypography.caption
+                                                    .copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: _Palette.ink,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
                       LayoutBuilder(
                         builder: (context, constraints) {
@@ -357,27 +462,7 @@ class _ScrapResultScreenState extends State<ScrapResultScreen> {
                               icon: Icons.recycling_rounded,
                               onPressed: () {
                                 if (!_materialConfirmed) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Please confirm the material before continuing.',
-                                      ),
-                                    ),
-                                  );
-                                  return;
-                                }
-
-                                if (!state.hasSupportedMaterial) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'This material is not supported yet. Please choose the material manually.',
-                                      ),
-                                    ),
-                                  );
-
-                                  _showMaterialPicker(context);
-                                  return;
+                                  setState(() => _materialConfirmed = true);
                                 }
 
                                 Navigator.of(context).push(

@@ -10,6 +10,7 @@ void main() {
       create: (_) {
         final state = AppState();
         state.loadTransactions();
+        state.refreshUserLocation();
         return state;
       },
       child: const KabadiwalaApp(),

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'mock_data.dart';
 import 'services/ai_api_service.dart';
+import 'services/location_service.dart';
 import 'services/scrap_classifier_service.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +15,37 @@ class AppState extends ChangeNotifier {
   void setOffline(bool value) {
     _isOffline = value;
     notifyListeners();
+  }
+
+  // ── User location ──────────────────────────────────────────────────────
+  double? _userLatitude;
+  double? _userLongitude;
+  String _userLocationDescription = 'Tap to fetch GPS location';
+  bool _isFetchingLocation = false;
+
+  double? get userLatitude => _userLatitude;
+  double? get userLongitude => _userLongitude;
+  String get userLocationDescription => _userLocationDescription;
+  bool get isFetchingLocation => _isFetchingLocation;
+
+  Future<void> refreshUserLocation({bool allowFallback = true}) async {
+    _isFetchingLocation = true;
+    notifyListeners();
+
+    try {
+      final res = await LocationService.instance.fetchLocation(
+        allowFallback: allowFallback,
+      );
+      _userLatitude = res.latitude;
+      _userLongitude = res.longitude;
+      _userLocationDescription = res.description;
+      _handoverLocation = res.coordinatesString;
+    } catch (_) {
+      // Ignored, safe fallback is preserved
+    } finally {
+      _isFetchingLocation = false;
+      notifyListeners();
+    }
   }
 
   // ── API service ────────────────────────────────────────────────────────
@@ -50,19 +82,34 @@ class AppState extends ChangeNotifier {
   double get weightKg => _weightKg;
   double get ratePerKg => _ratePerKg;
   double get estimatedValue => _weightKg * _ratePerKg;
+
   bool get hasSupportedMaterial {
-  return _ratePerKg > 0 &&
-      MockRecyclers.rankedForMaterial(_scannedMaterial).isNotEmpty;
-}
+    return _ratePerKg > 0 &&
+        MockRecyclers.rankedForMaterial(
+          _scannedMaterial,
+          userLat: _userLatitude,
+          userLng: _userLongitude,
+        ).isNotEmpty;
+  }
+
+  List<RecyclerData> get nearbyRecyclers {
+    return MockRecyclers.rankedForMaterial(
+      _scannedMaterial,
+      userLat: _userLatitude,
+      userLng: _userLongitude,
+    );
+  }
+
   double get aiConfidence => _aiConfidence;
   RecyclerData? get selectedRecycler => _selectedRecycler;
   String? get capturedImagePath => _capturedImagePath;
   String? get handoverLocation => _handoverLocation;
   XFile? get handoverPhoto => _handoverPhoto;
+
   void setHandoverLocation(String location) {
-  _handoverLocation = location;
-  notifyListeners();
-}
+    _handoverLocation = location;
+    notifyListeners();
+  }
 void setHandoverPhoto(XFile file) {
   _handoverPhoto = file;
   notifyListeners();

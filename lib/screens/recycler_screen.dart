@@ -6,13 +6,31 @@ import '../design_system/design_system.dart';
 import '../mock_data.dart';
 import 'confirm_handover_screen.dart';
 
-class RecyclerScreen extends StatelessWidget {
+class RecyclerScreen extends StatefulWidget {
   const RecyclerScreen({super.key});
 
   @override
+  State<RecyclerScreen> createState() => _RecyclerScreenState();
+}
+
+class _RecyclerScreenState extends State<RecyclerScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final state = context.read<AppState>();
+      if (state.userLatitude == null) {
+        state.refreshUserLocation();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final material = context.watch<AppState>().scannedMaterial;
-    final recyclers = MockRecyclers.rankedForMaterial(material);
+    final state = context.watch<AppState>();
+    final material = state.scannedMaterial;
+    final recyclers = state.nearbyRecyclers;
+
     return Scaffold(
       backgroundColor: _Palette.background,
       appBar: AppBar(
@@ -22,7 +40,7 @@ class RecyclerScreen extends StatelessWidget {
         toolbarHeight: 72,
         leading: _BackBtn(),
         title: Text(
-          'Best Recycler',
+          'Nearby Authorized Recyclers',
           style: AppTypography.sectionHeading.copyWith(
             color: _Palette.ink,
             fontSize: 18,
@@ -61,13 +79,13 @@ class RecyclerScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const _Eyebrow(
-                                  'KABADIWALA CONNECT  /  RECYCLER MATCHING',
+                                  'KABADIWALA CONNECT  /  NEAREST RECYCLERS',
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'The next stop for\nyour scrap.',
+                                  'Nearby authorized\nscrap recyclers.',
                                   style: AppTypography.headline1.copyWith(
-                                    fontSize: 32,
+                                    fontSize: 30,
                                     height: 1.16,
                                     color: _Palette.ink,
                                     fontWeight: FontWeight.w700,
@@ -76,15 +94,84 @@ class RecyclerScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'Authorized recyclers for $material',
+                                  'Showing certified collection facilities for $material sorted by closest distance.',
                                   style: AppTypography.body.copyWith(
                                     color: _Palette.muted,
                                   ),
                                 ),
                                 const SizedBox(height: 16),
-                                const _DetailChip(
-                                  icon: Icons.recycling_rounded,
-                                  label: 'Compare rates, distance and pickup options',
+                                // ── Live location bar ────────────────────────────────
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF5ED),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: const Color(0xFFD3E4CE),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.my_location_rounded,
+                                        color: _Palette.green,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'YOUR CURRENT LOCATION',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                color: _Palette.muted,
+                                                letterSpacing: 1.1,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              state.userLocationDescription,
+                                              style: AppTypography.caption
+                                                  .copyWith(
+                                                    color: _Palette.ink,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      IconButton(
+                                        tooltip: 'Update GPS Location',
+                                        icon: state.isFetchingLocation
+                                            ? const SizedBox(
+                                                width: 16,
+                                                height: 16,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: _Palette.green,
+                                                    ),
+                                              )
+                                            : const Icon(
+                                                Icons.refresh_rounded,
+                                                color: _Palette.green,
+                                                size: 20,
+                                              ),
+                                        onPressed: state.isFetchingLocation
+                                            ? null
+                                            : () => context
+                                                  .read<AppState>()
+                                                  .refreshUserLocation(),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -211,7 +298,35 @@ class _RecyclerCard extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.place_rounded, size: 16, color: _Palette.green),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                '${data.address} (${data.locality})',
+                style: AppTypography.caption.copyWith(
+                  color: _Palette.dark,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            const Icon(Icons.call_outlined, size: 15, color: _Palette.muted),
+            const SizedBox(width: 6),
+            Text(
+              data.phone,
+              style: AppTypography.caption.copyWith(color: _Palette.muted),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
         Text(
           'Accepts ${data.acceptsMaterial}',
           style: AppTypography.body.copyWith(color: _Palette.muted),
@@ -222,8 +337,8 @@ class _RecyclerCard extends StatelessWidget {
           runSpacing: 8,
           children: [
             _DetailChip(
-              icon: Icons.location_on_outlined,
-              label: '${data.distanceKm} km',
+              icon: Icons.near_me_rounded,
+              label: '${data.distanceKm} km away',
             ),
             _DetailChip(
               icon: data.pickupAvailable
@@ -270,6 +385,13 @@ class _RecyclerCard extends StatelessWidget {
             );
           },
         ),
+        const SizedBox(height: 8),
+        _ActionButton(
+          label: 'Location & Directions',
+          icon: Icons.map_outlined,
+          // outlined: true,
+          onPressed: () => _showLocationDialog(context, data),
+        ),
       ],
     );
     return Semantics(
@@ -309,6 +431,173 @@ class _RecyclerCard extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+
+  void _showLocationDialog(BuildContext context, RecyclerData data) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: _Palette.mint,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.store_rounded,
+                        color: _Palette.green,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            data.name,
+                            style: AppTypography.sectionHeading.copyWith(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Authorized Scrap Collection Facility',
+                            style: AppTypography.caption.copyWith(
+                              color: _Palette.green,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 32),
+                _LocationRow(
+                  icon: Icons.place_rounded,
+                  title: 'Facility Address',
+                  content: data.address,
+                  subtitle: data.locality,
+                ),
+                const SizedBox(height: 14),
+                _LocationRow(
+                  icon: Icons.near_me_rounded,
+                  title: 'GPS Coordinates & Proximity',
+                  content: '${data.latitude}, ${data.longitude}',
+                  subtitle: '${data.distanceKm} km away from your location',
+                ),
+                const SizedBox(height: 14),
+                _LocationRow(
+                  icon: Icons.phone_rounded,
+                  title: 'Facility Contact',
+                  content: data.phone,
+                  subtitle: 'Operating Hours: 09:00 AM - 07:30 PM (Mon-Sat)',
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _Palette.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Back to List',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _LocationRow extends StatelessWidget {
+  const _LocationRow({
+    required this.icon,
+    required this.title,
+    required this.content,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String content;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: _Palette.green),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: _Palette.muted,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                content,
+                style: AppTypography.body.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: _Palette.ink,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: AppTypography.caption.copyWith(color: _Palette.muted),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -404,6 +693,7 @@ class _ActionButton extends StatelessWidget {
     required this.icon,
     required this.onPressed,
   });
+
   final String label;
   final IconData icon;
   final VoidCallback onPressed;
@@ -419,7 +709,6 @@ class _ActionButton extends StatelessWidget {
         foregroundColor: Colors.white,
         minimumSize: const Size(48, 56),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        side: BorderSide.none,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         textStyle: const TextStyle(
           fontSize: 15,

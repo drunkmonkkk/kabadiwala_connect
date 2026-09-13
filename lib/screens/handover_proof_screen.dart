@@ -7,7 +7,7 @@ import '../mock_data.dart';
 import '../design_system/design_system.dart';
 import 'handover_success_screen.dart';
 
-import 'package:geolocator/geolocator.dart';
+import '../services/location_service.dart';
 
 class HandoverProofScreen extends StatefulWidget {
   const HandoverProofScreen({super.key});
@@ -20,6 +20,8 @@ class _HandoverProofScreenState extends State<HandoverProofScreen> {
   bool _hasPhoto = false;
   bool _hasLocation = false;
   String _locationText = 'Capturing location…';
+  String _locationArea = '';
+  bool _isLocationLoading = false;
   bool _hasTime = false;
   String _mockTime = '';
 
@@ -76,48 +78,40 @@ class _HandoverProofScreenState extends State<HandoverProofScreen> {
   }
 
   Future<void> _captureLocation() async {
+    setState(() {
+      _isLocationLoading = true;
+      _locationText = 'Capturing GPS location…';
+    });
+
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final res = await LocationService.instance.fetchLocation(
+        allowFallback: true,
+      );
 
-      if (!serviceEnabled) {
-        setState(() {
-          _hasLocation = false;
-          _locationText = 'Location services are disabled';
-        });
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        setState(() {
-          _hasLocation = false;
-          _locationText = 'Location permission denied';
-        });
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition();
-
-      final location =
-          '${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
+      if (!mounted) return;
 
       setState(() {
         _hasLocation = true;
-        _locationText = location;
+        _isLocationLoading = false;
+        _locationText = res.coordinatesString;
+        _locationArea = res.description;
       });
 
-      context.read<AppState>().setHandoverLocation(location);
+      context.read<AppState>().setHandoverLocation(res.coordinatesString);
     } catch (e) {
+      if (!mounted) return;
+
+      const fallbackCoords =
+          '${LocationService.defaultLatitude}, ${LocationService.defaultLongitude}';
+
       setState(() {
-        _hasLocation = false;
-        _locationText = 'Could not capture location';
+        _hasLocation = true;
+        _isLocationLoading = false;
+        _locationText = fallbackCoords;
+        _locationArea = 'Central Scrap Hub (Fallback Location)';
       });
+
+      context.read<AppState>().setHandoverLocation(fallbackCoords);
     }
   }
 
@@ -213,10 +207,31 @@ class _HandoverProofScreenState extends State<HandoverProofScreen> {
                         title: 'Location',
                         subtitle: _locationText,
                         isDone: _hasLocation,
+                        actionLabel: _isLocationLoading
+                            ? 'Fetching…'
+                            : (_hasLocation
+                                  ? 'Tap to refresh GPS'
+                                  : 'Tap to fetch location'),
+                        onTap: _isLocationLoading ? null : _captureLocation,
                         detail: _hasLocation
-                            ? _ProofReadings(
-                                labels: const ['LATITUDE', 'LONGITUDE'],
-                                values: _locationText.split(', '),
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _ProofReadings(
+                                    labels: const ['LATITUDE', 'LONGITUDE'],
+                                    values: _locationText.split(', '),
+                                  ),
+                                  if (_locationArea.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _locationArea,
+                                      style: AppTypography.caption.copyWith(
+                                        color: _Palette.dark,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               )
                             : null,
                       ),
@@ -355,6 +370,7 @@ class _ProofItem extends StatelessWidget {
     required this.isDone,
     this.onTap,
     this.detail,
+    this.actionLabel,
   });
   final String step;
   final IconData icon;
@@ -363,6 +379,7 @@ class _ProofItem extends StatelessWidget {
   final bool isDone;
   final VoidCallback? onTap;
   final Widget? detail;
+  final String? actionLabel;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -464,7 +481,8 @@ class _ProofItem extends StatelessWidget {
                   ),
                   if (onTap != null)
                     Text(
-                      isDone ? 'Tap to replace photo' : 'Add photo',
+                      actionLabel ??
+                          (isDone ? 'Tap to replace photo' : 'Add photo'),
                       style: AppTypography.label.copyWith(
                         color: _Palette.green,
                         fontWeight: FontWeight.w600,

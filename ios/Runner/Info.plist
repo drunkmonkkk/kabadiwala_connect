@@ -66,5 +66,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Kabadiwala Connect needs your location to authenticate scrap handovers and find nearby authorized recyclers.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Kabadiwala Connect needs your location to authenticate scrap handovers and find nearby authorized recyclers.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Kabadiwala Connect needs camera access to photograph scrap and record handover proofs.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Kabadiwala Connect needs photo library access to upload scrap images for identification.</string>
 </dict>
 </plist>
