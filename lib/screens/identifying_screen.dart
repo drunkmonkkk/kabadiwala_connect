@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
+import '../config/api_config.dart';
 import '../design_system/design_system.dart';
 import '../mock_data.dart';
 import '../services/ai_api_service.dart';
@@ -290,7 +291,64 @@ class _ErrorView extends StatelessWidget {
           icon: Icons.list_rounded,
           onPressed: onManual,
         ),
+        const SizedBox(height: AppSpacing.md),
+        TextButton.icon(
+          onPressed: () => _showServerDialog(context),
+          icon: const Icon(Icons.settings_ethernet_rounded, size: 16, color: AppColors.mutedGrey),
+          label: Text(
+            'Server: ${ApiConfig.baseUrl}',
+            style: AppTypography.caption.copyWith(color: AppColors.mutedGrey, decoration: TextDecoration.underline),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
+    );
+  }
+
+  void _showServerDialog(BuildContext context) {
+    final controller = TextEditingController(text: ApiConfig.baseUrl);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('AI Backend Server URL'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter the public HTTPS backend URL (e.g. Cloudflare tunnel, Render, or Hugging Face):',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'https://...',
+                labelText: 'Backend URL',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newUrl = controller.text.trim();
+              if (newUrl.isNotEmpty) {
+                ApiConfig.customBaseUrl = newUrl;
+              }
+              Navigator.of(ctx).pop();
+              onRetry();
+            },
+            child: const Text('Save & Retry'),
+          ),
+        ],
+      ),
     );
   }
 }

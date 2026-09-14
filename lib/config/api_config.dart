@@ -2,21 +2,31 @@ import 'package:flutter/foundation.dart';
 
 /// Central API configuration.
 ///
-/// Automatically uses 10.0.2.2 on Android emulator to connect to host PC,
-/// and 127.0.0.1 on Windows / Web / iOS.
+/// Automatically connects to the live Cloudflare HTTPS backend when running on Vercel/Web,
+/// uses 10.0.2.2 on Android emulator to connect to host PC,
+/// and 127.0.0.1 on local desktop.
 class ApiConfig {
   ApiConfig._();
 
+  /// Live Cloudflare HTTPS Tunnel URL connecting directly to the active Python AI backend.
+  static String customBaseUrl =
+      'https://together-mice-climb-covered.trycloudflare.com';
+
   /// Detect platform default host.
   static String get defaultHost {
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    if (kIsWeb) {
+      final isLocalWeb =
+          Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1';
+      if (!isLocalWeb) {
+        return 'https://together-mice-climb-covered.trycloudflare.com';
+      }
+      return 'http://127.0.0.1:8000';
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:8000';
     }
     return 'http://127.0.0.1:8000';
   }
-
-  /// Optional override for physical devices or custom backend URL.
-  static String customBaseUrl = '';
 
   /// Base URL of the FastAPI backend (no trailing slash).
   static String get baseUrl =>
@@ -29,5 +39,5 @@ class ApiConfig {
   static String get pcbAnalysisEndpoint => '$baseUrl/predict-pcb';
 
   /// Request timeout duration.
-  static const Duration requestTimeout = Duration(seconds: 30);
+  static const Duration requestTimeout = Duration(seconds: 35);
 }
