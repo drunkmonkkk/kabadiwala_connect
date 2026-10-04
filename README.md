@@ -54,5 +54,3 @@ The on-device model asset is currently a placeholder. See [assets/ml/PLACEHOLDER
 flutter analyze
 flutter test
 ```
-
-These are the project's development commands; their current results are not certified by this README.
